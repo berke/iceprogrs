@@ -1,8 +1,12 @@
+mod progress;
+
 use std::fs::File;
 use std::io::prelude::*;
 use spidev::{Spidev,SpidevOptions,SpiModeFlags};
 use gpiod::{Chip,Options};
 use pico_args::Arguments;
+
+use progress::ProgressIndicator;
 
 type Res<T> = Result<T,Box<dyn std::error::Error>>;
 
@@ -16,7 +20,7 @@ fn main()->Res<()> {
     let bs_path : String = args.value_from_str("--bitstream")?;
     let spi_path : String = args.opt_value_from_str("--spi")?
 	.unwrap_or_else(|| "/dev/spidev0.0".to_string());
-    let spi_speed : usize = args.opt_value_from_str("--spi-speed")?
+    let spi_speed : u32 = args.opt_value_from_str("--spi-speed")?
 	.unwrap_or(20_000);
     let ss_chip : String = args.opt_value_from_str("--ss-gpio")?
 	.unwrap_or_else(|| "gpiochip0".to_string());
@@ -31,13 +35,14 @@ fn main()->Res<()> {
     let mut fd = File::open(bs_path)?;
     let mut dat = Vec::new();
     fd.read_to_end(&mut dat)?;
-    println!("Bitstream size: {} B",dat.len());
+    let m = dat.len();
+    println!("Bitstream size: {} B",m);
     
     println!("Opening SPI device {} at {} Hz",spi_path,spi_speed);
     let mut spi = Spidev::open(spi_path)?;
     let options = SpidevOptions::new()
          .bits_per_word(8)
-         .max_speed_hz(20_000)
+         .max_speed_hz(spi_speed)
          .mode(SpiModeFlags::SPI_MODE_0)
          .build();
     spi.configure(&options)?;
@@ -58,15 +63,36 @@ fn main()->Res<()> {
 
     // Program
     println!("Programming FPGA");
+    let mut prog = ProgressIndicator::new("Programming FPGA",m);
     reset.set_values(1_u8)?;
     ss.set_values(1_u8)?;
-    delay_ms(100);
+    // loop {
+    // 	for k in 0..4 {
+    // 	    ss.set_values((k & 1) as u8)?;
+    // 	    reset.set_values((k >> 1) as u8)?;
+    // 	    delay_ms(100);
+    // 	}
+    // }
+    delay_ms(500);
     ss.set_values(0_u8)?;
     reset.set_values(0_u8)?;
-    delay_ms(1);
+    //delay_ms(10); // Drive SS_B low when RESET is released to activate SPI slave mode
+    delay_ms(500);
     reset.set_values(1_u8)?;
+    delay_ms(500);
 
-    for c in dat {
+    // let mut k = 0;
+    // for ch in dat.chunks(256) {
+    // 	prog.update(k);
+    // 	k += ch.len();
+    // 	spi.write(ch)?;
+    // }
+    // spi.write(&[0;7])?;
+
+    for (k,&c) in dat.iter().enumerate() {
+	if k & 255 == 0 {
+	    prog.update(k);
+	}
 	spi.write(&[c])?;
     }
     spi.write(&[0;7])?;
