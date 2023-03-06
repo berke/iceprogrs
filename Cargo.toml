@@ -1,6 +1,6 @@
 [package]
 name = "iceprogrs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Berke DURAK <bd@exhrd.fr>"]
 license = "Apache-2.0 OR MIT"
@@ -12,8 +12,9 @@ repository = "https://github.com/berke/iceprogrs"
 version = "0.5.1"
 
 [dependencies.gpiod]
-# path = "../gpiod-rs" - Bugfix
-version = "0.2.2"
+version = "^0.2.2"
+git = "https://github.com/berke/gpiod-rs" # Awaiting pull request https://github.com/katyo/gpiod-rs/pull/2
+branch = "fd-fix"
 features = []
 default-features = false
 
