@@ -30,6 +30,7 @@ fn main()->Res<()> {
 	.unwrap_or_else(|| "gpiochip1".to_string());
     let reset_pin : u32 = args.opt_value_from_str("--reset-pin")?
 	.unwrap_or(17);
+    let wait : Option<u64> = args.opt_value_from_str("--wait")?;
 
     println!("Loading bitstream from {}",bs_path);
     let mut fd = File::open(bs_path)?;
@@ -84,5 +85,11 @@ fn main()->Res<()> {
 
     delay_ms(100);
     println!("Done");
+
+    if let Some(d) = wait {
+	println!("Waiting for {} ms...",d);
+	delay_ms(d);
+    }
+
     Ok(())
 }
