@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod progress;
 
 use std::fs::File;
